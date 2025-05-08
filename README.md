@@ -2,7 +2,7 @@
 
 **Author**: Shreshtha Tripathi  
 **Date**: May 2025  
-**Institution**: [University of Amsterdam]
+**Institution**: University of Amsterdam
 
 This repository accompanies my Master Thesis, which investigates systemic financial stress through the lens of **Covered Interest Parity (CIP) deviations**. The project introduces a novel **CIP Stress Measure** and analyzes its explanatory power over the **ECB Composite Indicator of Systemic Stress (CISS)**.
 
@@ -101,15 +101,13 @@ python main.py
 If you use this work, please cite:
 
 Tripathi, Shreshtha. "Analyzing Systemic Stress via Covered Interest Parity Deviations." Master Thesis, [University Name], May 2025.
-📩 Contact
 
-For questions, reach out at: [your-email@example.com]
 
-📄 License
+For questions, reach out at: shreshtha453@gmail.com
 
-MIT License. See LICENSE file for details.
+
 
 
 ---
 
-Let me know if you’d like help setting up the code structure (`main.py`, data folders, etc.) or generating plots for the README.
+
