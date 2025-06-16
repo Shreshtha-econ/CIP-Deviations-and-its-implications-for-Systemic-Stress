@@ -10,18 +10,19 @@ This repository accompanies my Master Thesis, which investigates systemic financ
 
 ## 🧾 Data Description
 
-The analysis uses daily financial market data from central banks and financial databases:
+The analysis uses daily financial market data from central banks and financial databases for 5 currencies. For example,
 
 - `y`: 3-Month U.S. Treasury Bill Rate (% per annum)
 - `y*`: 3-Month EURIBOR (% per annum)
 - `s`: USD/EUR Spot Exchange Rate
 - `f`: 3-Month Forward USD/EUR Exchange Rate
 
-CISS components (excluding Money Market input):
+Various indicators are used to capture CISS components:
 - Bond Market Risk
 - Equity Market Risk
 - Foreign Exchange Market Risk
 - Intermediary Market Risk
+- Money Market Risk
 
 ---
 
@@ -66,20 +67,10 @@ CIP_Stress_t =
 
 ### 5. Regression on ECB CISS
 
-A linear regression is used to evaluate the link between the stress measure and systemic risk:
-
-CISS_t = β₀ + β₁·Band_t + β₂·Bond_t + β₃·Equity_t + β₄·FX_t + β₅·Intermediaries_t + ε_t
+Standard portfolio theory is used to create a systemic risk indicator which gives weight to individual markets depending on how interconnected they are with other markets - thus capturing systemic risk. This is consistent with ECB's Composite Indicator of Systemic Stress (CISS). The indicator constructed leads the official CISS by nearly 3 months!
 
 
----
-
-## 📊 Key Results
-
-- **Intermediaries Input** and **Band Width** are significant predictors of systemic stress.
-- High **R² = 0.780**, indicating strong explanatory power.
-- Highlights the importance of market frictions in assessing financial stability.
-
----
+--
 
 ## 🔧 Installation & Usage
 
@@ -100,7 +91,7 @@ python main.py
 
 If you use this work, please cite:
 
-Tripathi, Shreshtha. "Analyzing Systemic Stress via Covered Interest Parity Deviations." Master Thesis, [University Name], May 2025.
+Tripathi, Shreshtha. "Novel Foreign Exchange Risk Indicator through modeling Covered Interest Parity Deviations." Master Thesis, [University Name], June 2025.
 
 
 For questions, reach out at: shreshtha453@gmail.com
