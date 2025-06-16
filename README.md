@@ -9,16 +9,20 @@ This project implements a comprehensive financial analysis system for studying C
 ```
 master_thesis_project/
 ├── README.md                    # This file
+├── CHANGELOG.md                 # Version history and improvements
+├── PRODUCTION_GUIDE.md         # Production deployment guide
 ├── requirements.txt             # Python dependencies
+├── test_all_endpoints.py        # Comprehensive API testing (100% success)
+├── test_visualization_endpoints.py # Chart endpoint testing
 ├── config/                      # Configuration files
 ├── src/                         # Source code
 │   ├── data/                   # Data loading and preprocessing
 │   ├── analysis/               # Analysis modules
 │   ├── visualization/          # Plotting and visualization
-│   ├── api/                    # Flask REST API (NEW!)
+│   ├── api/                    # Flask REST API
 │   └── utils/                  # Utility functions
 ├── tests/                      # Test suite
-├── data/                       # Data files
+├── Data/                       # Data files
 │   ├── raw/                   # Original Excel files
 │   ├── processed/             # Cleaned CSV files
 │   └── results/               # Analysis outputs
@@ -350,3 +354,5 @@ pip install --upgrade Flask Flask-CORS
 - **Project Overview**: `docs/PROJECT_EXPLAINED_SIMPLE.md`
 - **Comprehensive Test Suite**: `test_all_endpoints.py`
 - **Visualization Tests**: `test_visualization_endpoints.py`
+- **Production Guide**: `PRODUCTION_GUIDE.md`
+- **Change History**: `CHANGELOG.md`
