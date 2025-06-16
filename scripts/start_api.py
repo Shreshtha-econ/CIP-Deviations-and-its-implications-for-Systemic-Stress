@@ -30,9 +30,9 @@ def main():
         print("✅ Flask application imported successfully")
         print("📊 Starting server...")
         print("🌐 Server will be available at:")
-        print("   - Local: http://localhost:5000")
-        print("   - Network: http://0.0.0.0:5000")
-        print("📚 API Documentation: http://localhost:5000")
+        print("   - Local: http://localhost:8000")
+        print("   - Network: http://0.0.0.0:8000")
+        print("📚 API Documentation: http://localhost:8000")
         print("")
         print("💡 Press Ctrl+C to stop the server")
         print("=" * 50)
@@ -41,7 +41,7 @@ def main():
         app.run(
             debug=True,
             host='0.0.0.0',
-            port=5000,
+            port=8000,
             use_reloader=True,
             threaded=True
         )
