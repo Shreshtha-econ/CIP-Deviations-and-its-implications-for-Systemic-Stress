@@ -98,29 +98,36 @@ def load_data():
         not _cached_data):
         
         try:
-            logger.info("Loading financial data...")
-            
+            logger.info("Loading financial data...")            
             # Load processed data if available
             master_data_path = PROCESSED_DATA_DIR / "master_dataset.csv"
             final_data_path = PROCESSED_DATA_DIR / "final_merged_data.csv"
             
             if final_data_path.exists():
                 _cached_data['raw'] = pd.read_csv(final_data_path, index_col=0, parse_dates=True)
+                _cached_data['merged_data'] = _cached_data['raw']
                 logger.info(f"Loaded cached data: {len(_cached_data['raw'])} rows")
             elif master_data_path.exists():
                 _cached_data['raw'] = pd.read_csv(master_data_path, index_col=0, parse_dates=True)
+                _cached_data['merged_data'] = _cached_data['raw']
                 logger.info(f"Loaded master dataset: {len(_cached_data['raw'])} rows")
             else:
                 # Load fresh data using the data pipeline
                 loader = DataLoader()
-                merger = DataMerger(loader)
+                merger = DataMerger()
                 preprocessor = DataPreprocessor()
                 
                 # Load and merge data
-                merged_data = merger.merge_all_data()
+                merged_data = merger.create_master_dataset()
                 processed_data = preprocessor.preprocess_data(merged_data)
                 _cached_data['raw'] = processed_data
+                _cached_data['merged_data'] = processed_data
                 logger.info(f"Loaded fresh data: {len(_cached_data['raw'])} rows")
+            
+            # Ensure FX bandwidth and volatility columns are present
+            merger = DataMerger()
+            _cached_data['merged_data'] = merger.generate_missing_fx_columns(_cached_data['merged_data'])
+            logger.info("Enhanced data with missing FX columns")
             
             # Initialize analyzers
             _cached_data['cip_analyzer'] = CIPAnalyzer()
@@ -239,6 +246,11 @@ def home():
         <div class="endpoint">
             <span class="method">GET</span> <span class="path">/api/charts/summary_dashboard</span>
             <div class="description">Generate comprehensive summary dashboard</div>
+        </div>
+        
+        <div class="endpoint">
+            <span class="method">GET</span> <span class="path">/api/charts/dashboard</span>
+            <div class="description">Generate main dashboard with key metrics and charts</div>
         </div>
         
         <h2>🖼️ Chart Views (HTML)</h2>
@@ -784,10 +796,53 @@ def chart_cip_deviation_vs_band():
         data = load_data()
         if not data or 'merged_data' not in data:
             return APIResponse.error("Data not available", 500)
+          # Create simplified band analysis using available CIP data
+        cip_results = {}
+        merged_data = data['merged_data'].copy()
         
-        # Run CIP analysis to get band results
-        analyzer = CIPAnalyzer()
-        cip_results = analyzer.analyze_all_currencies(data['merged_data'])
+        for currency in CURRENCIES.keys():
+            x_col = f'x_{currency}'
+            if x_col in merged_data.columns:
+                try:
+                    # Get the CIP deviation data and date index
+                    if 'Date' in merged_data.columns:
+                        currency_data = merged_data[['Date', x_col]].dropna()
+                        currency_data = currency_data.set_index('Date')
+                    else:
+                        # Data already has Date as index
+                        currency_data = merged_data[[x_col]].dropna()
+                    
+                    if len(currency_data) > 10:
+                        # Get the series for calculation
+                        x_series = currency_data[x_col]
+                        
+                        # Calculate simple quantile bands
+                        q05 = x_series.quantile(0.05)
+                        q95 = x_series.quantile(0.95)
+                        
+                        # Create rolling quantile bands (simplified)
+                        currency_data['Q5.0'] = x_series.rolling(window=min(60, len(x_series)//2), min_periods=5).quantile(0.05)
+                        currency_data['Q95.0'] = x_series.rolling(window=min(60, len(x_series)//2), min_periods=5).quantile(0.95)
+                        
+                        # Fill any remaining NaN values with overall quantiles
+                        currency_data['Q5.0'] = currency_data['Q5.0'].fillna(q05)
+                        currency_data['Q95.0'] = currency_data['Q95.0'].fillna(q95)
+                        
+                        cip_results[currency] = {
+                            'data': currency_data,
+                            'currency': currency
+                        }
+                        
+                        logger.info(f"Created band analysis for {currency}: {len(currency_data)} observations")
+                    else:
+                        logger.warning(f"Insufficient data for {currency}: {len(currency_data)} observations")
+                except Exception as e:
+                    logger.error(f"Error processing {currency}: {str(e)}")
+            else:
+                logger.warning(f"CIP deviation column {x_col} not found")
+        
+        if not cip_results:
+            return APIResponse.error("No valid CIP data found for band analysis", 500)
         
         plotter = FinancialPlotter()
         chart_images = plotter.plot_cip_deviation_vs_band(cip_results, CURRENCIES)
@@ -945,63 +1000,142 @@ def chart_summary_dashboard():
             'ciss_comparison': None,  # Would be populated if official CISS available
             'cross_correlation': {'lags': list(range(-5, 6)), 'values': [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 0.9, 0.7, 0.5, 0.3, 0.1]}
         }
-        
+
         plotter = FinancialPlotter()
-        chart_image = plotter.create_summary_dashboard(analysis_results)
+        dashboard_image = plotter.plot_summary_dashboard(analysis_results)
         
-        if not chart_image:
+        if not dashboard_image:
             return APIResponse.error("Failed to generate dashboard", 500)
         
         return APIResponse.success({
             "chart_type": "summary_dashboard",
             "format": "base64_png",
-            "image": chart_image,
-            "description": "Comprehensive financial analysis summary dashboard"
+            "image": dashboard_image,
+            "description": "Comprehensive analysis dashboard"
         })
         
     except Exception as e:
-        logger.error(f"Chart generation failed: {str(e)}")
+        logger.error(f"Dashboard generation failed: {str(e)}")
         return APIResponse.error(f"Failed to generate summary dashboard: {str(e)}", 500)
 
-@app.route('/api/charts/ecb_ciss')
-def chart_ecb_ciss():
-    """Generate official ECB CISS chart."""
+@app.route('/api/charts/dashboard')
+def chart_dashboard():
+    """Generate main dashboard with key metrics and charts."""
     try:
-        # Try to load official ECB CISS data
-        try:
-            import os
-            ciss_file = os.path.join(PROCESSED_DATA_DIR.parent, 'raw', 'ecb_ciss.xlsx')
-            if not os.path.exists(ciss_file):
-                return APIResponse.error("Official ECB CISS data file not found", 404)
-            
-            official_ecb = pd.read_excel(ciss_file, engine="openpyxl", header=1)
-            official_ecb["Date"] = pd.to_datetime(official_ecb["Date"], errors='coerce')
-            official_ecb = official_ecb.set_index("Date")
-            
-            if "ECB_CISS" not in official_ecb.columns:
-                return APIResponse.error("ECB_CISS column not found in data", 400)
+        data = load_data()
+        if not data or 'merged_data' not in data:
+            return APIResponse.error("Data not available", 500)
+        
+        # Get summary statistics
+        merged_data = data['merged_data']
+        
+        # Calculate basic statistics for dashboard
+        stats = {
+            'total_observations': len(merged_data),
+            'date_range': {
+                'start': merged_data.index.min().isoformat() if not merged_data.empty else None,
+                'end': merged_data.index.max().isoformat() if not merged_data.empty else None
+            },
+            'available_currencies': [],
+            'cip_deviations': {},
+            'risk_indicators': {}
+        }
+        
+        # Check available currencies
+        cip_columns = ['x_usd', 'x_gbp', 'x_jpy', 'x_sek', 'x_chf']
+        for col in cip_columns:
+            if col in merged_data.columns:
+                currency = col.split('_')[1].upper()
+                stats['available_currencies'].append(currency)
                 
-        except Exception as e:
-            return APIResponse.error(f"Failed to load ECB CISS data: {str(e)}", 500)
+                # Get basic stats for each currency
+                series = merged_data[col].dropna()
+                if len(series) > 0:
+                    stats['cip_deviations'][currency] = {
+                        'mean': float(series.mean()),
+                        'std': float(series.std()),
+                        'current': float(series.iloc[-1]) if len(series) > 0 else None
+                    }
         
-        plotter = FinancialPlotter()
-        chart_image = plotter.plot_ecb_ciss(official_ecb, "ECB_CISS")
-        
-        if not chart_image:
-            return APIResponse.error("Failed to generate chart", 500)
+        # Check for CISS indicators
+        ciss_columns = [col for col in merged_data.columns if 'ciss' in col.lower()]
+        if ciss_columns:
+            stats['risk_indicators']['ciss_available'] = True
+            for col in ciss_columns[:3]:  # Limit to first 3
+                series = merged_data[col].dropna()
+                if len(series) > 0:
+                    stats['risk_indicators'][col] = {
+                        'mean': float(series.mean()),
+                        'current': float(series.iloc[-1]) if len(series) > 0 else None
+                    }
         
         return APIResponse.success({
-            "chart_type": "ecb_ciss",
-            "format": "base64_png",
-            "image": chart_image,
-            "description": "Official ECB Composite Indicator of Systemic Stress (CISS)"
+            "chart_type": "dashboard",
+            "format": "json",
+            "data": stats,
+            "description": "Main dashboard with key financial metrics"
         })
         
     except Exception as e:
-        logger.error(f"Chart generation failed: {str(e)}")
-        return APIResponse.error(f"Failed to generate ECB CISS chart: {str(e)}", 500)
+        logger.error(f"Dashboard generation failed: {str(e)}")
+        return APIResponse.error(f"Failed to generate dashboard: {str(e)}", 500)
 
-# ...existing code...
+@app.route('/charts/cip_deviations_view')
+def cip_deviations_view():
+    """HTML page with embedded CIP deviations chart."""
+    try:
+        data = load_data()
+        if not data or 'merged_data' not in data:
+            return "Data not available", 500
+        plotter = FinancialPlotter()
+        chart_image = plotter.plot_cip_deviations(data['merged_data'])
+        if not chart_image:
+            return "Failed to generate chart", 500
+        html = f'''
+        <html>
+            <head><title>CIP Deviations Chart</title></head>
+            <body>
+                <h2>CIP Deviations Over Time</h2>
+                <img src="data:image/png;base64,{chart_image}" alt="CIP Deviations Chart">
+            </body>
+        </html>
+        '''
+        return html
+    except Exception as e:
+        logger.error(f"CIP Deviations View failed: {str(e)}")
+        return f"Error: {str(e)}", 500
+
+@app.route('/charts/dashboard_view')
+def dashboard_view():
+    """HTML page with embedded summary dashboard chart."""
+    try:
+        data = load_data()
+        if not data or 'merged_data' not in data:
+            return "Data not available", 500
+        analyzer = CIPAnalyzer()
+        risk_analyzer = SystemicRiskAnalyzer()
+        analysis_results = {
+            'cip_data': data['merged_data'],
+            'ciss_comparison': None,
+            'cross_correlation': {'lags': list(range(-5, 6)), 'values': [0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 0.9, 0.7, 0.5, 0.3, 0.1]}
+        }
+        plotter = FinancialPlotter()
+        chart_image = plotter.create_summary_dashboard(analysis_results)
+        if not chart_image:
+            return "Failed to generate dashboard", 500
+        html = f'''
+        <html>
+            <head><title>Financial Dashboard</title></head>
+            <body>
+                <h2>Financial Analysis Summary Dashboard</h2>
+                <img src="data:image/png;base64,{chart_image}" alt="Summary Dashboard">
+            </body>
+        </html>
+        '''
+        return html
+    except Exception as e:
+        logger.error(f"Dashboard View failed: {str(e)}")
+        return f"Error: {str(e)}", 500
 
 @app.errorhandler(404)
 def not_found(error):

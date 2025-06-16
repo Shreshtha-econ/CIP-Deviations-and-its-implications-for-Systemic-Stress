@@ -342,6 +342,5 @@ pip install --upgrade Flask Flask-CORS
 
 - **Visualization Endpoints Guide**: `docs/VISUALIZATION_ENDPOINTS.md`
 - **API Documentation**: `docs/API_DOCUMENTATION.md`
-- **Deployment Guide**: `docs/DEPLOYMENT_GUIDE.md`
 - **Visualization System Summary**: `VISUALIZATION_COMPLETE.md`
 - **Test Script**: `test_visualization_endpoints.py`

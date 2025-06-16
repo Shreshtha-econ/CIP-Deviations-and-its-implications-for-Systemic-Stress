@@ -369,3 +369,13 @@ class SystemicRiskAnalyzer:
             return f"Official CISS leads constructed CISS by {lag} periods"
         else:
             return f"Constructed CISS leads official CISS by {abs(lag)} periods"
+    
+    def calculate_ciss(self, market_data: pd.DataFrame) -> pd.Series:
+        """Wrapper for legacy API: construct and return CISS series only."""
+        result = self.construct_ciss_indicator(market_data)
+        if isinstance(result, dict) and 'ciss_series' in result:
+            return result['ciss_series']
+        elif isinstance(result, pd.Series):
+            return result
+        else:
+            raise ValueError("CISS calculation failed: no ciss_series in result")

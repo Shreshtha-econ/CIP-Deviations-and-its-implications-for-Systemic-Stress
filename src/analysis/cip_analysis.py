@@ -164,6 +164,24 @@ class CIPAnalyzer:
         
         return df
 
+    def analyze_all_currencies(self, data: pd.DataFrame) -> Dict:
+        """Analyze all currencies and return comprehensive results."""
+        logger.info("Analyzing all currencies")
+        
+        results = {}
+        currency_analyzer = CurrencyAnalyzer(self.config)
+        
+        for currency in CURRENCIES.keys():
+            try:
+                logger.info(f"Processing {currency.upper()}")
+                result = currency_analyzer.analyze_currency(data, currency)
+                results[currency] = result
+            except Exception as e:
+                logger.error(f"Failed to analyze {currency}: {str(e)}")
+                results[currency] = {'error': str(e)}
+        
+        return results
+    
 
 class QuantileEstimator:
     """Handles quantile estimation using kernel methods."""

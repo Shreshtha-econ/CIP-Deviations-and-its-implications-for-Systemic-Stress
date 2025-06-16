@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 """
 Visualization Module
 Creates professional charts and plots for financial analysis.
@@ -54,19 +57,33 @@ class FinancialPlotter:
             
             fig, ax = plt.subplots(figsize=self.config['figure_size'])
             
+            plotted_any = False
             # Plot each currency
             for i, ((col, label), color) in enumerate(zip(cip_columns.items(), colors)):
                 if col not in data.columns:
-                    logger.warning(f"Column {col} not found in data")
+                    logger.warning(f"Column {col} not found in data; skipping {label}")
                     continue
                 
-                temp_data = data[["Date", col]].dropna()
+                temp_data = data[[col]].dropna()
+                
                 if temp_data.empty:
-                    logger.warning(f"No data available for {label}")
+                    logger.warning(f"No data available for {label}; skipping")
                     continue
                 
-                ax.plot(temp_data["Date"], temp_data[col], 
-                       label=label, color=color, linewidth=2)
+                # If Date column exists, use it; else use index
+                if 'Date' in data.columns:
+                    temp_data = data[["Date", col]].dropna()
+                    x_vals = temp_data["Date"]
+                else:
+                    x_vals = temp_data.index
+                
+                ax.plot(x_vals, temp_data[col], label=label, color=color, linewidth=2)
+                plotted_any = True
+            
+            if not plotted_any:
+                logger.error("No CIP deviation data available for any currency.")
+                plt.close()
+                return None
             
             # Formatting
             ax.set_title("Covered Interest Parity (CIP) Deviations Over Time", 
@@ -80,8 +97,7 @@ class FinancialPlotter:
             ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
             plt.xticks(rotation=45)
             
-            # Add reference line
-            ax.axhline(0, color='black', linestyle=':', linewidth=1, alpha=0.7)
+            # Add reference line            ax.axhline(0, color='black', linestyle=':', linewidth=1, alpha=0.7)
             
             # Legend
             ax.legend(loc="upper right", fontsize=11, framealpha=0.9)
@@ -98,7 +114,7 @@ class FinancialPlotter:
             logger.error(f"Failed to plot CIP deviations: {str(e)}")
             plt.close()
             return None
-    
+
     def plot_bandwidth_vs_volatility(self, data: pd.DataFrame, 
                                     currency: str,
                                     save_format: str = 'base64') -> Union[str, None]:
@@ -106,22 +122,31 @@ class FinancialPlotter:
         try:
             fig, ax = plt.subplots(figsize=self.config['figure_size'])
             
+            # Map currency to column names
+            currency_lower = currency.lower()
+            bandwidth_col = f"Band_Width_scaled_{currency_lower}"
+            volatility_col = "FX_RealizedVol_scaled"
+            
             # Check required columns
-            required_cols = ["Band_Width_scaled", "FX_RealizedVol_scaled"]
-            if not all(col in data.columns for col in required_cols):
-                logger.error(f"Missing required columns: {required_cols}")
+            required_cols = [bandwidth_col, volatility_col]
+            missing_cols = [col for col in required_cols if col not in data.columns]
+            
+            if missing_cols:
+                logger.error(f"Missing required columns for {currency}: {missing_cols}")
+                logger.info(f"Available columns that might match: {[col for col in data.columns if 'Band_Width' in col or 'FX_Realized' in col]}")
                 return None
             
-            clean_data = data[required_cols].dropna()
+            # Get clean data for plotting
+            plot_data = data[[bandwidth_col, volatility_col]].dropna()
             
-            if len(clean_data) == 0:
-                logger.error("No valid data for plotting")
+            if len(plot_data) == 0:
+                logger.error(f"No valid data for plotting {currency} bandwidth vs volatility")
                 return None
             
             # Plot both series
-            ax.plot(clean_data.index, clean_data["Band_Width_scaled"], 
+            ax.plot(plot_data.index, plot_data[bandwidth_col], 
                    label="Band Width", color="blue", linewidth=2)
-            ax.plot(clean_data.index, clean_data["FX_RealizedVol_scaled"], 
+            ax.plot(plot_data.index, plot_data[volatility_col], 
                    label="FX Realized Volatility", color="orange", linewidth=2)
             
             # Formatting
@@ -141,7 +166,7 @@ class FinancialPlotter:
                 return None
                 
         except Exception as e:
-            logger.error(f"Failed to plot bandwidth vs volatility: {str(e)}")
+            logger.error(f"Failed to plot bandwidth vs volatility for {currency}: {str(e)}")
             plt.close()
             return None
     
@@ -436,5 +461,75 @@ class FinancialPlotter:
                 
         except Exception as e:
             logger.error(f"Failed to plot ECB CISS: {str(e)}")
+            plt.close()
+            return None
+    
+    def plot_summary_dashboard(self, analysis_results: Dict,
+                              save_format: str = 'base64') -> Union[str, None]:
+        """Plot comprehensive summary dashboard."""
+        try:
+            fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+            
+            # Plot 1: CIP Deviations
+            ax1 = axes[0, 0]
+            if 'cip_data' in analysis_results:
+                cip_data = analysis_results['cip_data']
+                cip_columns = ['x_usd', 'x_gbp', 'x_jpy', 'x_sek', 'x_chf']
+                colors = ['blue', 'red', 'green', 'orange', 'purple']
+                
+                for col, color in zip(cip_columns, colors):
+                    if col in cip_data.columns:
+                        temp_data = cip_data[col].dropna()
+                        if not temp_data.empty:
+                            ax1.plot(temp_data.index, temp_data.values, 
+                                   label=col.split('_')[1].upper(), color=color)
+                
+                ax1.set_title('CIP Deviations Over Time', fontsize=14, fontweight='bold')
+                ax1.set_xlabel('Date')
+                ax1.set_ylabel('CIP Deviation')
+                ax1.legend()
+                ax1.grid(True, alpha=0.3)
+            
+            # Plot 2: CISS Comparison (placeholder)
+            ax2 = axes[0, 1]
+            ax2.text(0.5, 0.5, 'CISS Comparison\n(Requires official ECB data)', 
+                    ha='center', va='center', transform=ax2.transAxes, fontsize=12)
+            ax2.set_title('CISS Comparison', fontsize=14, fontweight='bold')
+            
+            # Plot 3: Cross-correlation
+            ax3 = axes[1, 0]
+            if 'cross_correlation' in analysis_results:
+                ccf_data = analysis_results['cross_correlation']
+                ax3.stem(ccf_data['lags'], ccf_data['values'], basefmt=' ')
+                ax3.axhline(0, color='black', linewidth=0.5)
+                ax3.set_title('Cross-Correlation', fontsize=14, fontweight='bold')
+                ax3.set_xlabel('Lag')
+                ax3.set_ylabel('Correlation')
+                ax3.grid(True, alpha=0.3)
+            
+            # Plot 4: Summary Statistics
+            ax4 = axes[1, 1]
+            if 'cip_data' in analysis_results:
+                cip_data = analysis_results['cip_data']
+                stats_text = f"Dataset Overview:\n"
+                stats_text += f"• Total observations: {len(cip_data)}\n"
+                stats_text += f"• Date range: {cip_data.index.min().strftime('%Y-%m-%d')} to {cip_data.index.max().strftime('%Y-%m-%d')}\n"
+                stats_text += f"• Available currencies: {len([c for c in ['x_usd', 'x_gbp', 'x_jpy', 'x_sek', 'x_chf'] if c in cip_data.columns])}"
+                
+                ax4.text(0.1, 0.9, stats_text, transform=ax4.transAxes, 
+                        fontsize=11, verticalalignment='top', fontfamily='monospace')
+                ax4.set_title('Summary Statistics', fontsize=14, fontweight='bold')
+                ax4.axis('off')
+            
+            plt.tight_layout()
+            
+            if save_format == 'base64':
+                return self._save_plot_base64(fig)
+            else:
+                plt.show()
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to plot summary dashboard: {str(e)}")
             plt.close()
             return None
