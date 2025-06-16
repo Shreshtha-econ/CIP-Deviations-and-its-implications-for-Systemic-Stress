@@ -1,4 +1,4 @@
-# 📘 Master Thesis: Analyzing Systemic Stress via Covered Interest Parity Deviations
+# 📘 Master Thesis: Novel Foreign Exchange Risk Indicator through modeling Covered Interest Parity Deviations
 
 **Author**: Shreshtha Tripathi  
 **Date**: May 2025  
