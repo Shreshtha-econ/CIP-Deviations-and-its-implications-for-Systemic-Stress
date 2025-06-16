@@ -125,7 +125,7 @@ Complex Results → Simple Website → Anyone Can Use
 ### 🌐 **Visit Our Website**
 ```bash
 1. Start the computer program: python src/api/app.py
-2. Open web browser: http://localhost:5000
+2. Open web browser: http://localhost:5050
 3. Explore financial data from around the world!
 ```
 

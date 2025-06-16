@@ -109,7 +109,7 @@ from PIL import Image
 import io
 
 # Get CIP deviations chart
-response = requests.get('http://localhost:5000/api/charts/cip_deviations')
+response = requests.get('http://localhost:5050/api/charts/cip_deviations')
 if response.status_code == 200:
     data = response.json()
     image_data = base64.b64decode(data['data']['image'])
@@ -117,7 +117,7 @@ if response.status_code == 200:
     image.show()
 
 # Get bandwidth vs volatility for EUR
-response = requests.get('http://localhost:5000/api/charts/bandwidth_volatility?currency=EUR')
+response = requests.get('http://localhost:5050/api/charts/bandwidth_volatility?currency=EUR')
 chart_data = response.json()
 ```
 
@@ -136,13 +136,13 @@ fetch('/api/charts/cip_deviations')
 ### **cURL (command line)**
 ```bash
 # Get CIP deviations chart
-curl "http://localhost:5000/api/charts/cip_deviations"
+curl "http://localhost:5050/api/charts/cip_deviations"
 
 # Get bandwidth volatility for GBP
-curl "http://localhost:5000/api/charts/bandwidth_volatility?currency=GBP"
+curl "http://localhost:5050/api/charts/bandwidth_volatility?currency=GBP"
 
 # View in browser
-curl "http://localhost:5000/charts/cip_deviations_view" > chart.html
+curl "http://localhost:5050/charts/cip_deviations_view" > chart.html
 ```
 
 ---
@@ -254,12 +254,12 @@ curl "http://localhost:5000/charts/cip_deviations_view" > chart.html
 python scripts/start_api.py
 
 # Test in browser
-http://localhost:5000/charts/cip_deviations_view
-http://localhost:5000/charts/dashboard_view
+http://localhost:5050/charts/cip_deviations_view
+http://localhost:5050/charts/dashboard_view
 ```
 
 ### **API Documentation**
-- **Full API docs**: `http://localhost:5000/` (when API is running)
+- **Full API docs**: `http://localhost:5050/` (when API is running)
 - **Endpoint details**: `docs/API_DOCUMENTATION.md`
 - **Deployment guide**: `docs/DEPLOYMENT_GUIDE.md`
 

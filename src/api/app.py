@@ -466,9 +466,10 @@ def cip_deviations():
 def cip_analysis_currency(currency):
     """Detailed CIP analysis for specific currency."""
     try:
-        currency = currency.upper()
-        if currency not in CURRENCIES:
-            return APIResponse.error(f"Currency {currency} not supported. Available: {CURRENCIES}")
+        currency_upper = currency.upper()
+        currency_lower = currency.lower()
+        if currency_lower not in CURRENCIES:
+            return APIResponse.error(f"Currency {currency_upper} not supported. Available currencies: {list(CURRENCIES.keys())}")
         
         data = load_data()
         raw_data = data['raw']
@@ -479,16 +480,16 @@ def cip_analysis_currency(currency):
         
         # Find relevant columns for this currency
         currency_cols = [col for col in cip_data.columns 
-                        if currency.lower() in col.lower()]
+                        if currency_lower in col.lower()]
         
         if not currency_cols:
-            return APIResponse.error(f"No data found for currency: {currency}")
+            return APIResponse.error(f"No data found for currency: {currency_upper}")
         
         currency_data = cip_data[currency_cols].dropna()
         
         # Calculate analysis metrics
         analysis_result = {
-            "currency": currency,
+            "currency": currency_upper,
             "analysis_period": {
                 "start": currency_data.index.min().isoformat(),
                 "end": currency_data.index.max().isoformat(),
@@ -496,27 +497,45 @@ def cip_analysis_currency(currency):
             },
             "metrics": {}
         }
-        
-        # Calculate metrics for each relevant column
+          # Calculate metrics for each relevant column
         for col in currency_cols:
             series = currency_data[col].dropna()
             if len(series) > 0:
-                analysis_result["metrics"][col] = {
-                    "descriptive_stats": {
-                        "mean": float(series.mean()),
-                        "median": float(series.median()),
-                        "std": float(series.std()),
-                        "min": float(series.min()),
-                        "max": float(series.max()),
-                        "skewness": float(series.skew()),
-                        "kurtosis": float(series.kurtosis())
-                    },
-                    "recent_values": series.tail(10).to_dict(),
-                    "volatility": {
-                        "rolling_30d": series.rolling(30).std().tail(1).iloc[0] if len(series) >= 30 else None,
-                        "rolling_90d": series.rolling(90).std().tail(1).iloc[0] if len(series) >= 90 else None
+                try:
+                    # Ensure series contains numeric data
+                    series = pd.to_numeric(series, errors='coerce').dropna()
+                    if len(series) == 0:
+                        continue
+                    
+                    # Calculate volatility values safely
+                    vol_30d = None
+                    vol_90d = None
+                    if len(series) >= 30:
+                        vol_30d_val = series.rolling(30).std().tail(1).iloc[0]
+                        vol_30d = float(vol_30d_val) if not pd.isna(vol_30d_val) else None
+                    if len(series) >= 90:
+                        vol_90d_val = series.rolling(90).std().tail(1).iloc[0]
+                        vol_90d = float(vol_90d_val) if not pd.isna(vol_90d_val) else None
+                    
+                    analysis_result["metrics"][col] = {
+                        "descriptive_stats": {
+                            "mean": float(series.mean()),
+                            "median": float(series.median()),
+                            "std": float(series.std()),
+                            "min": float(series.min()),
+                            "max": float(series.max()),
+                            "skewness": float(series.skew()),
+                            "kurtosis": float(series.kurtosis())
+                        },
+                        "recent_values": {str(k): float(v) for k, v in series.tail(10).items() if not pd.isna(v)},
+                        "volatility": {
+                            "rolling_30d": vol_30d,
+                            "rolling_90d": vol_90d
+                        }
                     }
-                }
+                except Exception as col_error:
+                    logger.warning(f"Error processing column {col}: {str(col_error)}")
+                    continue
         
         return APIResponse.success(analysis_result, f"CIP analysis for {currency} completed successfully")
         
@@ -576,9 +595,8 @@ def risk_indicators():
                 result["ciss"] = {
                     "latest_value": float(ciss_series.iloc[-1]),
                     "mean": float(ciss_series.mean()),
-                    "std": float(ciss_series.std()),
-                    "percentile_95": float(ciss_series.quantile(0.95)),
-                    "recent_trend": ciss_series.tail(10).to_dict()
+                    "std": float(ciss_series.std()),                    "percentile_95": float(ciss_series.quantile(0.95)),
+                    "recent_trend": {str(k): float(v) for k, v in ciss_series.tail(10).items()}
                 }
         
         return APIResponse.success(result, "Risk indicators calculated successfully")
@@ -640,10 +658,9 @@ def ciss_indicator():
                 }
             }
         }
-        
-        # Add recent data
+          # Add recent data
         if request.args.get('include_data', '').lower() == 'true':
-            result["recent_data"] = ciss_series.tail(50).to_dict()
+            result["recent_data"] = {str(k): float(v) for k, v in ciss_series.tail(50).items()}
         
         # Add block contributions if available
         if blocks_data:
@@ -765,14 +782,31 @@ def chart_cip_deviations():
 def chart_bandwidth_volatility():
     """Generate bandwidth vs volatility chart."""
     try:
-        currency = request.args.get('currency', 'EUR').upper()
+        currency = request.args.get('currency', 'USD').upper()  # Changed default from EUR to USD
+        currency_lower = currency.lower()
         
         data = load_data()
         if not data or 'merged_data' not in data:
             return APIResponse.error("Data not available", 500)
         
+        # Check if the required columns exist for this currency
+        bandwidth_col = f"Band_Width_scaled_{currency_lower}"
+        volatility_col = "FX_RealizedVol_scaled"
+        
+        if bandwidth_col not in data['merged_data'].columns:
+            available_currencies = []
+            for col in data['merged_data'].columns:
+                if 'Band_Width_scaled_' in col:
+                    curr = col.replace('Band_Width_scaled_', '').upper()
+                    available_currencies.append(curr)
+            
+            return APIResponse.error(
+                f"Bandwidth data not available for {currency}. Available currencies: {available_currencies}", 
+                400
+            )
+        
         plotter = FinancialPlotter()
-        chart_image = plotter.plot_bandwidth_vs_volatility(data['merged_data'], currency)
+        chart_image = plotter.plot_bandwidth_vs_volatility(data['merged_data'], currency_lower)
         
         if not chart_image:
             return APIResponse.error("Failed to generate chart", 500)
@@ -1152,7 +1186,7 @@ def internal_error(error):
 if __name__ == '__main__':
     # Development vs Production
     is_production = os.environ.get('FLASK_ENV') == 'production'
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5050))
     
     if is_production:
         print("🌐 Starting Financial Analysis API in PRODUCTION mode...")
@@ -1160,7 +1194,7 @@ if __name__ == '__main__':
     else:
         print("🏦 Starting Financial Analysis API in DEVELOPMENT mode...")
         print(f"🌐 API will be available at: http://localhost:{port}")
-        print("📚 Documentation available at: http://localhost:5000")
+        print(f"📚 Documentation available at: http://localhost:{port}")
     
     print(f"📊 Data directory: {PROCESSED_DATA_DIR}")
     print(f"💱 Supported currencies: {', '.join(CURRENCIES)}")

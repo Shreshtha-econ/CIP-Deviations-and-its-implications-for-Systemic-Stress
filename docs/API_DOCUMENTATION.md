@@ -6,8 +6,8 @@ The Financial Analysis API provides RESTful endpoints for accessing Covered Inte
 
 ## Base URL
 
-- **Development**: `http://localhost:5000`
-- **Local Network**: `http://0.0.0.0:5000`
+- **Development**: `http://localhost:5050`
+- **Local Network**: `http://0.0.0.0:5050`
 
 ## Features
 
@@ -413,7 +413,7 @@ The API implements intelligent caching:
 import requests
 
 # Get API status
-response = requests.get('http://localhost:5000/api/status')
+response = requests.get('http://localhost:5050/api/status')
 print(response.json())
 
 # Get CIP deviations for EUR
@@ -422,19 +422,19 @@ params = {
     'start_date': '2020-01-01',
     'end_date': '2021-01-01'
 }
-response = requests.get('http://localhost:5000/api/cip/deviations', params=params)
+response = requests.get('http://localhost:5050/api/cip/deviations', params=params)
 print(response.json())
 ```
 
 ### JavaScript
 ```javascript
 // Get API status
-fetch('http://localhost:5000/api/status')
+fetch('http://localhost:5050/api/status')
   .then(response => response.json())
   .then(data => console.log(data));
 
 // Get risk indicators
-fetch('http://localhost:5000/api/risk/indicators')
+fetch('http://localhost:5050/api/risk/indicators')
   .then(response => response.json())
   .then(data => console.log(data));
 ```
@@ -442,13 +442,13 @@ fetch('http://localhost:5000/api/risk/indicators')
 ### cURL
 ```bash
 # Get API status
-curl http://localhost:5000/api/status
+curl http://localhost:5050/api/status
 
 # Get CIP deviations with parameters
-curl "http://localhost:5000/api/cip/deviations?currency=EUR&start_date=2020-01-01"
+curl "http://localhost:5050/api/cip/deviations?currency=EUR&start_date=2020-01-01"
 
 # Custom analysis
-curl -X POST http://localhost:5000/api/analysis/custom \
+curl -X POST http://localhost:5050/api/analysis/custom \
   -H "Content-Type: application/json" \
   -d '{"analysis_type": "correlation", "parameters": {"columns": ["SpotRateUSDtoEUR"]}}'
 ```

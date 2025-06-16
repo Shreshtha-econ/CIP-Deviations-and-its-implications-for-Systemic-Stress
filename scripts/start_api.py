@@ -22,17 +22,16 @@ def main():
     
     if not os.environ.get('FLASK_DEBUG'):
         os.environ['FLASK_DEBUG'] = 'True'
-    
-    # Import and run the app
+      # Import and run the app
     try:
         from src.api.app import app
         
         print("✅ Flask application imported successfully")
         print("📊 Starting server...")
         print("🌐 Server will be available at:")
-        print("   - Local: http://localhost:5000")
-        print("   - Network: http://0.0.0.0:5000")
-        print("📚 API Documentation: http://localhost:5000")
+        print("   - Local: http://localhost:5050")
+        print("   - Network: http://0.0.0.0:5050")
+        print("📚 API Documentation: http://localhost:5050")
         print("")
         print("💡 Press Ctrl+C to stop the server")
         print("=" * 50)
@@ -41,7 +40,7 @@ def main():
         app.run(
             debug=True,
             host='0.0.0.0',
-            port=5000,
+            port=5050,
             use_reloader=True,
             threaded=True
         )

@@ -97,10 +97,10 @@ flask run
 ```
 
 ### **Access the API**
-- **Web Browser**: http://localhost:5000 (Interactive documentation)
-- **API Base URL**: http://localhost:5000/api/
-- **Health Check**: http://localhost:5000/api/status
-- **CIP Analysis**: http://localhost:5000/api/cip/deviations
+- **Web Browser**: http://localhost:5050 (Interactive documentation)
+- **API Base URL**: http://localhost:5050/api/
+- **Health Check**: http://localhost:5050/api/status
+- **CIP Analysis**: http://localhost:5050/api/cip/deviations
 
 ### **Example API Calls**
 
@@ -109,25 +109,25 @@ flask run
 import requests
 
 # Get API status
-response = requests.get('http://localhost:5000/api/status')
+response = requests.get('http://localhost:5050/api/status')
 print(response.json())
 
 # Get CIP deviations for EUR
 params = {'currency': 'EUR', 'start_date': '2020-01-01', 'end_date': '2021-01-01'}
-response = requests.get('http://localhost:5000/api/cip/deviations', params=params)
+response = requests.get('http://localhost:5050/api/cip/deviations', params=params)
 print(response.json())
 ```
 
 **cURL:**
 ```bash
 # API status
-curl http://localhost:5000/api/status
+curl http://localhost:5050/api/status
 
 # CIP analysis
-curl "http://localhost:5000/api/cip/deviations?currency=EUR&start_date=2020-01-01"
+curl "http://localhost:5050/api/cip/deviations?currency=EUR&start_date=2020-01-01"
 
 # Risk indicators
-curl http://localhost:5000/api/risk/indicators
+curl http://localhost:5050/api/risk/indicators
 ```
 
 ## 📋 **Testing**
