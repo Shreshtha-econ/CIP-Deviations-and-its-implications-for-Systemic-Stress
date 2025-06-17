@@ -1,8 +1,3 @@
-"""
-API Startup Script
-Convenient script to start the Flask API server.
-"""
-
 import sys
 import os
 from pathlib import Path
@@ -18,15 +13,16 @@ def main():
     
     # Set environment variables if not already set
     if not os.environ.get('FLASK_ENV'):
-        os.environ['FLASK_ENV'] = 'development'
+        os.environ['FLASK_ENV'] = 'production'
     
     if not os.environ.get('FLASK_DEBUG'):
-        os.environ['FLASK_DEBUG'] = 'True'
-      # Import and run the app
+        os.environ['FLASK_DEBUG'] = 'False'
+    
+    # Import and run the app
     try:
-        from src.api.app import app
+        from src.shre_api import app
         
-        print("✅ Flask application imported successfully")
+        print("✅ Flask API imported successfully")
         print("📊 Starting server...")
         print("🌐 Server will be available at:")
         print("   - Local: http://localhost:8057")
@@ -38,15 +34,15 @@ def main():
         
         # Start the server
         app.run(
-            debug=True,
+            debug=False,
             host='0.0.0.0',
             port=8057,
-            use_reloader=True,
+            use_reloader=False,
             threaded=True
         )
         
     except ImportError as e:
-        print(f"❌ Failed to import Flask application: {e}")
+        print(f"❌ Failed to import Flask API: {e}")
         print("🔧 Make sure all dependencies are installed:")
         print("   pip install -r requirements.txt")
         sys.exit(1)

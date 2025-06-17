@@ -36,18 +36,17 @@ master_thesis_project/
 ### 1. Installation
 
 ```bash
-# Clone or navigate to the project directory
-cd "C:\Users\saurabh.dubey\Documents\Masters\Shre\Master Thesis Project"
+
 
 # Install dependencies
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ### 2. Run Complete Analysis
 
 ```bash
 # Run the complete analysis pipeline
-python scripts/run_analysis.py
+python3 scripts/run_analysis.py
 
 # Force reload of data (if needed)
 python scripts/run_analysis.py --force-reload
