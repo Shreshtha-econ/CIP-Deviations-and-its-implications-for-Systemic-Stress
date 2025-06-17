@@ -1,4 +1,6 @@
 dash
 requests
+pandas
+plotly
 flask
 gunicorn
